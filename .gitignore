@@ -1,0 +1,78 @@
+# ============================================================
+# .gitignore — US Macro Risk Dashboard
+# ============================================================
+
+# Secrets et credentials — NE JAMAIS COMMIT
+.env
+.env.local
+.env.*.local
+secrets.toml
+.streamlit/secrets.toml
+*.key
+*.pem
+
+# Cache Streamlit
+.streamlit/cache/
+
+# Snapshots locaux (peuvent contenir des données spécifiques)
+snapshots/
+*.csv
+*.parquet
+*.db
+
+# Notebooks et exports locaux
+*.ipynb_checkpoints/
+*.ipynb
+*-checkpoint.ipynb
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Environnements virtuels
+venv/
+env/
+ENV/
+.venv/
+.virtualenv/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
