@@ -76,3 +76,7 @@ logs/
 .Trashes
 ehthumbs.db
 Desktop.ini
+
+# Backups serveur
+*.bak
+*.pre-*.bak
