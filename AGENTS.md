@@ -14,6 +14,7 @@ réponse publique, un agent doit citer :
 - Le score source est un z-score signé, pas une probabilité de récession.
 - Le moteur corrigé combine z-score, drift et momentum par moyenne pondérée.
 - Le backtest pénalise les séries qui produisent trop d'alertes hors récession.
+- En production, `us.l0g.fr` sert `app_server.py`, pas seulement `app.py`.
 
 ## Ce que l'agent ne doit pas dire
 
@@ -39,5 +40,5 @@ surfaces l0g :
 ## Validation rapide du code
 
 ```bash
-PYTHONPYCACHEPREFIX=/tmp/macro_pycache python3 -m py_compile catalog.py data.py app.py
+PYTHONPYCACHEPREFIX=/tmp/macro_pycache python3 -m py_compile catalog.py data.py app.py app_server.py
 ```

@@ -42,6 +42,26 @@ streamlit run app.py
 
 L'app s'ouvre automatiquement dans ton navigateur sur `http://localhost:8501`.
 
+## Production us.l0g.fr
+
+Le serveur public `us.l0g.fr` lance `app_server.py` via systemd :
+
+```text
+/opt/macro_dashboard/venv/bin/streamlit run /opt/macro_dashboard/app_server.py
+```
+
+`app.py` reste l'application de développement local. `app_server.py` doit rester
+commité dans ce dépôt pour que GitHub, le poste local et la production puissent
+être comparés sans ambiguïté.
+
+Vérification rapide après déploiement :
+
+```bash
+PYTHONPYCACHEPREFIX=/tmp/us-prod-pycache /opt/macro_dashboard/venv/bin/python3 -m py_compile /opt/macro_dashboard/catalog.py /opt/macro_dashboard/data.py /opt/macro_dashboard/app_server.py
+curl -fsS http://127.0.0.1:8501/_stcore/health
+curl -fsS https://us.l0g.fr/_stcore/health
+```
+
 ## Comment ça marche
 
 - **Premier lancement** : téléchargement des séries FRED depuis 1985 (~1 minute), puis backtest historique (~30 secondes), puis reconstruction du score mensuel depuis 1990 (~2 minutes). Total ~3-4 minutes pour le tout premier lancement.
@@ -74,6 +94,7 @@ pénalise les séries qui génèrent trop de faux positifs.
 ```
 macro_dashboard/
 ├── app.py             # Application Streamlit (interface)
+├── app_server.py      # Variante servie en production par us.l0g.fr
 ├── catalog.py         # Catalogue des séries FRED + règles méthodologiques
 ├── data.py            # Téléchargement + calculs (avec cache Streamlit)
 ├── docs/              # Documentation méthodologique
