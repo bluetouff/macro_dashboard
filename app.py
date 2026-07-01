@@ -434,7 +434,7 @@ for tab, famille in zip(tabs, fam_scores_df.index):
 st.markdown("---")
 col_f1, col_f2, col_f3 = st.columns([2, 1, 1])
 with col_f1:
-    st.caption("📊 Données : FRED (St. Louis Fed) | Méthodologie : z-score 5Y + drift pré-COVID + momentum + pondération empirique calibrée backtest")
+    st.caption("📊 Données : FRED (St. Louis Fed) | Méthodologie : moyenne pondérée z-score 5Y, drift pré-COVID et momentum, avec pénalité faux positifs hors récession")
 with col_f2:
     st.caption(f"🔄 Cache 6h | Dernier calcul : {datetime.now().strftime('%H:%M')}")
 with col_f3:
