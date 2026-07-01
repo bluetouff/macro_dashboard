@@ -128,6 +128,15 @@ ZSCORE_WARNING = 1.5
 ZSCORE_DANGER = 2.5
 DRIFT_WARNING = 25  # %
 DRIFT_DANGER = 50   # %
+MOMENTUM_WARNING = 20  # %
+STRESS_COMPONENT_WEIGHTS = {
+    'zscore': 0.50,
+    'drift': 0.25,
+    'momentum': 0.25,
+}
+FALSE_POSITIVE_WARNING_LEVEL = ZSCORE_WARNING
+FALSE_POSITIVE_PENALTY = 1.0
+FALSE_POSITIVE_BUFFER_MONTHS = 12
 
 # ============================================================
 # RÉCESSIONS NBER (pour backtest)

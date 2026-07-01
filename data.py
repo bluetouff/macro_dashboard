@@ -13,7 +13,9 @@ from catalog import (
     SERIES_CATALOG, REGIME_CHANGE_SERIES, NON_STATIONARY, NO_MOMENTUM_SERIES,
     PRE_COVID_REF_START, PRE_COVID_REF_END,
     ZSCORE_WINDOW_YEARS, ZSCORE_WARNING, ZSCORE_DANGER,
-    DRIFT_WARNING, NBER_RECESSIONS,
+    DRIFT_WARNING, MOMENTUM_WARNING, STRESS_COMPONENT_WEIGHTS,
+    FALSE_POSITIVE_WARNING_LEVEL, FALSE_POSITIVE_PENALTY, FALSE_POSITIVE_BUFFER_MONTHS,
+    NBER_RECESSIONS, NBER_RECESSION_PERIODS,
 )
 
 
@@ -70,6 +72,33 @@ def fetch_all_series(start='1985-01-01'):
 # CALCUL DES MÉTRIQUES
 # ============================================================
 
+def weighted_stress_component_score(components):
+    """Combine les dimensions de stress sans retenir mécaniquement le pire signal."""
+    weighted_sum = 0.0
+    weight_sum = 0.0
+    for name, value in components.items():
+        if pd.isna(value):
+            continue
+        weight = STRESS_COMPONENT_WEIGHTS.get(name, 0.0)
+        if weight <= 0:
+            continue
+        weighted_sum += float(value) * weight
+        weight_sum += weight
+    if weight_sum <= 0:
+        return np.nan
+    return weighted_sum / weight_sum
+
+
+def is_near_recession(date, buffer_months=FALSE_POSITIVE_BUFFER_MONTHS):
+    """Vrai dans une récession NBER ou dans une fenêtre tampon autour d'elle."""
+    date = pd.Timestamp(date)
+    for start, end in NBER_RECESSION_PERIODS:
+        lower = pd.Timestamp(start) - pd.DateOffset(months=buffer_months)
+        upper = pd.Timestamp(end) + pd.DateOffset(months=buffer_months)
+        if lower <= date <= upper:
+            return True
+    return False
+
 def compute_metrics_for_series(data, sid, meta):
     """Calcule toutes les métriques pour une série."""
     if data is None or len(data) < 10:
@@ -121,21 +150,17 @@ def compute_metrics_for_series(data, sid, meta):
     if pd.notna(pct_1y):
         momentum_signals.append(sign * pct_1y)
     if momentum_signals:
-        momentum = max(momentum_signals)
-        MOMENTUM_WARNING = 20
+        momentum = float(np.mean(momentum_signals))
         momentum_zscore_equiv = momentum / (MOMENTUM_WARNING / ZSCORE_WARNING)
     else:
         momentum_zscore_equiv = np.nan
     
-    # Score composite final : max des dimensions valides
-    candidates = []
-    if pd.notna(signed_z):
-        candidates.append(signed_z)
-    if sid not in REGIME_CHANGE_SERIES and pd.notna(drift_zscore_equiv):
-        candidates.append(drift_zscore_equiv)
-    if sid not in NO_MOMENTUM_SERIES and pd.notna(momentum_zscore_equiv):
-        candidates.append(momentum_zscore_equiv)
-    stress_final = max(candidates) if candidates else np.nan
+    components = {'zscore': signed_z}
+    if sid not in REGIME_CHANGE_SERIES:
+        components['drift'] = drift_zscore_equiv
+    if sid not in NO_MOMENTUM_SERIES:
+        components['momentum'] = momentum_zscore_equiv
+    stress_final = weighted_stress_component_score(components)
     
     return {
         'series_id': sid,
@@ -238,12 +263,30 @@ def compute_predictive_power(_all_data, all_data_keys):
                     z = historical_zscore(_all_data[sid], target, sid)
                     if pd.notna(z):
                         scores_by_horizon[h].append(sign * z)
+
+            nonrec_scores = []
+            if sid in _all_data:
+                start = max(pd.Timestamp('1990-01-01'), _all_data[sid].index.min())
+                end = _all_data[sid].index.max()
+                for target in pd.date_range(start, end, freq='QS'):
+                    if is_near_recession(target):
+                        continue
+                    z = historical_zscore(_all_data[sid], target, sid)
+                    if pd.notna(z):
+                        nonrec_scores.append(sign * z)
+            false_positive_rate = (
+                float(np.mean([score >= FALSE_POSITIVE_WARNING_LEVEL for score in nonrec_scores]))
+                if nonrec_scores
+                else np.nan
+            )
             
             row = {
                 'series_id': sid,
                 'name': meta['name'],
                 'famille': famille,
                 'mode': 'ΔYoY' if sid in NON_STATIONARY else 'niveau',
+                'false_positive_rate': false_positive_rate,
+                'n_nonrec_obs': len(nonrec_scores),
             }
             for h in horizons:
                 row[f'avg_z_{h}m'] = np.mean(scores_by_horizon[h]) if scores_by_horizon[h] else np.nan
@@ -251,7 +294,9 @@ def compute_predictive_power(_all_data, all_data_keys):
             results.append(row)
     
     bt = pd.DataFrame(results)
-    bt['pred_power'] = bt[['avg_z_3m', 'avg_z_6m', 'avg_z_12m']].mean(axis=1)
+    bt['pred_power_raw'] = bt[['avg_z_3m', 'avg_z_6m', 'avg_z_12m']].mean(axis=1)
+    bt['false_positive_penalty'] = bt['false_positive_rate'].fillna(0) * FALSE_POSITIVE_PENALTY
+    bt['pred_power'] = bt['pred_power_raw'] - bt['false_positive_penalty']
     bt['n_min'] = bt[['n_obs_3m', 'n_obs_6m', 'n_obs_12m']].min(axis=1)
     return bt
 
