@@ -234,6 +234,53 @@ st.markdown("""
     #MainMenu { visibility: hidden; }
     header[data-testid="stHeader"] { display: none; }
     div[data-testid="stToolbar"] { display: none; }
+
+    div[data-testid="stMarkdownContainer"] h2 {
+        font-size: 1.55rem !important;
+        line-height: 1.2 !important;
+        font-weight: 700 !important;
+        letter-spacing: 0 !important;
+        text-transform: none !important;
+        margin-top: 1.2rem !important;
+        margin-bottom: 0.9rem !important;
+    }
+    div[data-testid="stMarkdownContainer"] h3 {
+        font-size: 1.35rem !important;
+        line-height: 1.25 !important;
+        font-weight: 650 !important;
+        letter-spacing: 0 !important;
+        margin-top: 1.1rem !important;
+        margin-bottom: 0.75rem !important;
+    }
+    .brand {
+        font-size: 1rem !important;
+        font-weight: 750 !important;
+    }
+    .tagline {
+        font-size: 0.66rem !important;
+    }
+    .help-card, .stale-warning {
+        font-size: 0.76rem !important;
+        padding: 10px 14px !important;
+    }
+    .kpi-card {
+        min-height: 96px !important;
+        padding: 13px 14px 12px !important;
+    }
+    .kpi-label {
+        font-size: 0.58rem !important;
+        letter-spacing: 0.06em !important;
+    }
+    .kpi-value {
+        font-size: 1.38rem !important;
+        line-height: 1.18 !important;
+        font-weight: 650 !important;
+        overflow-wrap: anywhere;
+    }
+    .kpi-delta {
+        font-size: 0.68rem !important;
+        margin-top: 7px !important;
+    }
     @media (max-width: 1180px) {
         .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .faq-grid { grid-template-columns: 1fr; }
@@ -644,7 +691,7 @@ tabs = st.tabs([f"{FAMILY_ICONS.get(f, '')} {FAMILY_LABELS.get(f, f)}" for f in 
 for tab, famille in zip(tabs, fam_scores_df.index):
     with tab:
         sub = df[df['famille'] == famille].sort_values('stress_weighted', ascending=False).copy()
-        col_a, col_b = st.columns([2, 3])
+        col_a, col_b = st.columns([1, 5])
         with col_a:
             score = fam_scores_df.loc[famille, 'score']
             st.metric(label="Score famille", value=f"{score:+.2f}")
@@ -658,7 +705,18 @@ for tab, famille in zip(tabs, fam_scores_df.index):
             sub['Valeur'] = sub['current'].apply(lambda v: f"{v:,.2f}" if abs(v) < 10000 else f"{v:,.0f}")
             display = sub[['Statut', 'Tier', 'series_id', 'name', 'Valeur', 'Z brut', 'Score']].rename(
                 columns={'series_id': 'Code', 'name': 'Indicateur'})
-            st.dataframe(display, hide_index=True, use_container_width=True)
+            st.dataframe(
+                display,
+                hide_index=True,
+                use_container_width=True,
+                column_config={
+                    "Code": st.column_config.TextColumn("Code", width="small"),
+                    "Indicateur": st.column_config.TextColumn("Indicateur", width="large"),
+                    "Valeur": st.column_config.TextColumn("Valeur", width="small"),
+                    "Z brut": st.column_config.NumberColumn("Z brut", width="small"),
+                    "Score": st.column_config.NumberColumn("Score", width="small"),
+                },
+            )
 
 
 # ============================================================
