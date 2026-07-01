@@ -323,7 +323,11 @@ def render_faq_page() -> None:
     with st.expander("Quelles sont les limites ?"):
         st.markdown("""
         Les series peuvent etre revisees, certaines sont trimestrielles, et les regimes economiques
-        changent. Le tableau de bord sert a orienter la lecture, pas a remplacer une analyse macro complete.
+        changent. Le moteur US calibre ses poids sur quatre recessions NBER seulement et ne mesure pas
+        explicitement les faux positifs hors recession. Enfin, le score retient le maximum entre z-score,
+        drift et momentum, ce qui favorise mecaniquement les alertes precoces au detriment de la parcimonie.
+
+        Le tableau de bord sert a orienter la lecture, pas a remplacer une analyse macro complete.
         """)
 
 
