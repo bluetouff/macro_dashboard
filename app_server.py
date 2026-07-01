@@ -30,7 +30,7 @@ from catalog import (
 SNAPSHOTS_DIR = Path(os.environ.get('SNAPSHOTS_DIR', '/var/lib/macro_dashboard/snapshots'))
 
 st.set_page_config(
-    page_title="US Macro Risk Dashboard",
+page_title="US Macro Risk Dashboard",
     page_icon="🇺🇸",
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -495,96 +495,147 @@ st.markdown("---")
 # GRILLE PRINCIPALE
 # ============================================================
 
-row1_col1, row1_col2 = st.columns(2)
+st.markdown("### 📈 Score composite historique (1990 → now)")
+fig = go.Figure()
+fig.add_trace(go.Scatter(
+    x=g_series.index,
+    y=g_series.values,
+    mode='lines',
+    line=dict(color='#5eead4', width=1.8),
+    fill='tozeroy',
+    fillcolor='rgba(94, 234, 212, 0.10)',
+    hovertemplate='<b>%{x|%b %Y}</b><br>Score: %{y:+.2f}<extra></extra>',
+))
+for start_rec, end_rec in NBER_RECESSION_PERIODS:
+    fig.add_vrect(
+        x0=start_rec,
+        x1=end_rec,
+        fillcolor='rgba(192, 48, 40, 0.2)',
+        line_width=0,
+        layer='below',
+    )
+fig.add_hline(y=0, line_dash='dot', line_color='rgba(255,255,255,0.25)', line_width=1)
+fig.add_hline(
+    y=ZSCORE_WARNING,
+    line_dash='dash',
+    line_color='#f5b13d',
+    line_width=1,
+    annotation_text='Vigilance',
+    annotation_position='right',
+    annotation_font_color='#f5b13d',
+)
+fig.add_hline(
+    y=ZSCORE_DANGER,
+    line_dash='dash',
+    line_color='#ff4d87',
+    line_width=1,
+    annotation_text='Danger',
+    annotation_position='right',
+    annotation_font_color='#ff4d87',
+)
+fig.add_trace(go.Scatter(
+    x=[g_series.index[-1]],
+    y=[current_hist],
+    mode='markers',
+    marker=dict(size=12, color='#f5f6f8', line=dict(color='#5eead4', width=2)),
+    showlegend=False,
+))
+fig.update_layout(
+    template='plotly_dark',
+    plot_bgcolor='#1a1a1a',
+    paper_bgcolor='#1a1a1a',
+    height=460,
+    margin=dict(l=10, r=10, t=10, b=10),
+    showlegend=False,
+    xaxis=dict(gridcolor='rgba(0,240,208,0.08)'),
+    yaxis=dict(gridcolor='rgba(0,240,208,0.08)', title='Score'),
+)
+st.plotly_chart(fig, use_container_width=True)
 
-with row1_col1:
-    st.markdown("### 📈 Score composite historique (1990 → now)")
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=g_series.index, y=g_series.values, mode='lines',
-        line=dict(color='#5eead4', width=1.8),
-        fill='tozeroy', fillcolor='rgba(94, 234, 212, 0.10)',
-        hovertemplate='<b>%{x|%b %Y}</b><br>Score: %{y:+.2f}<extra></extra>',
-    ))
-    for start, end in NBER_RECESSION_PERIODS:
-        fig.add_vrect(x0=start, x1=end, fillcolor='rgba(192, 48, 40, 0.2)',
-                      line_width=0, layer='below')
-    fig.add_hline(y=0, line_dash='dot', line_color='rgba(255,255,255,0.25)', line_width=1)
-    fig.add_hline(y=ZSCORE_WARNING, line_dash='dash', line_color='#f5b13d', line_width=1,
-                  annotation_text='Vigilance', annotation_position='right',
-                  annotation_font_color='#f5b13d')
-    fig.add_hline(y=ZSCORE_DANGER, line_dash='dash', line_color='#ff4d87', line_width=1,
-                  annotation_text='Danger', annotation_position='right',
-                  annotation_font_color='#ff4d87')
-    fig.add_trace(go.Scatter(x=[g_series.index[-1]], y=[current_hist], mode='markers',
-                              marker=dict(size=12, color='#f5f6f8', line=dict(color='#5eead4', width=2)),
-                              showlegend=False))
-    fig.update_layout(template='plotly_dark', plot_bgcolor='#1a1a1a', paper_bgcolor='#1a1a1a',
-                      height=350, margin=dict(l=10, r=10, t=10, b=10), showlegend=False,
-                      xaxis=dict(gridcolor='rgba(0,240,208,0.08)'), yaxis=dict(gridcolor='rgba(0,240,208,0.08)', title='Score'))
-    st.plotly_chart(fig, use_container_width=True)
+st.markdown("---")
+st.markdown("### 🌡️ Scores par famille")
+fd = fam_scores_df.copy()
+fd['label'] = fd.index.map(lambda x: f"{FAMILY_ICONS.get(x, '')} {FAMILY_LABELS.get(x, x)}")
+fd['color'] = fd['score'].apply(status_color)
+fd = fd.sort_values('score', ascending=True)
+fig = go.Figure()
+fig.add_trace(go.Bar(
+    y=fd['label'],
+    x=fd['score'],
+    orientation='h',
+    marker_color=fd['color'],
+    text=[f"{s:+.2f}" for s in fd['score']],
+    textposition='outside',
+    textfont=dict(color='#f5f6f8', size=11),
+))
+fig.add_vline(x=0, line_color='rgba(255,255,255,0.25)', line_width=1)
+fig.add_vline(x=ZSCORE_WARNING, line_dash='dash', line_color='#f5b13d', line_width=1)
+fig.add_vline(x=ZSCORE_DANGER, line_dash='dash', line_color='#ff4d87', line_width=1)
+fig.update_layout(
+    template='plotly_dark',
+    plot_bgcolor='#1a1a1a',
+    paper_bgcolor='#1a1a1a',
+    height=420,
+    margin=dict(l=10, r=70, t=10, b=10),
+    showlegend=False,
+    font=dict(color='#b8fff5'),
+    xaxis=dict(gridcolor='rgba(0,240,208,0.08)', range=[-1.5, max(3, fd['score'].max() + 0.5)]),
+    yaxis=dict(gridcolor='rgba(0,240,208,0.08)'),
+)
+st.plotly_chart(fig, use_container_width=True)
 
-with row1_col2:
-    st.markdown("### 🌡️ Scores par famille")
-    fd = fam_scores_df.copy()
-    fd['label'] = fd.index.map(lambda x: f"{FAMILY_ICONS.get(x, '')} {FAMILY_LABELS.get(x, x)}")
-    fd['color'] = fd['score'].apply(status_color)
-    fd = fd.sort_values('score', ascending=True)
-    fig = go.Figure()
-    fig.add_trace(go.Bar(y=fd['label'], x=fd['score'], orientation='h',
-                          marker_color=fd['color'],
-                          text=[f"{s:+.2f}" for s in fd['score']],
-                          textposition='outside', textfont=dict(color='#f5f6f8', size=11)))
-    fig.add_vline(x=0, line_color='rgba(255,255,255,0.25)', line_width=1)
-    fig.add_vline(x=ZSCORE_WARNING, line_dash='dash', line_color='#f5b13d', line_width=1)
-    fig.add_vline(x=ZSCORE_DANGER, line_dash='dash', line_color='#ff4d87', line_width=1)
-    fig.update_layout(template='plotly_dark', plot_bgcolor='#1a1a1a', paper_bgcolor='#1a1a1a',
-                      height=350, margin=dict(l=10, r=40, t=10, b=10), showlegend=False,
-                      xaxis=dict(gridcolor='rgba(0,240,208,0.08)', range=[-1.5, max(3, fd['score'].max() + 0.5)]),
-                      yaxis=dict(gridcolor='rgba(0,240,208,0.08)'))
-    st.plotly_chart(fig, use_container_width=True)
+st.markdown("---")
+st.markdown("### Top 10 indicateurs stresses")
+top10 = df.nlargest(10, 'stress_weighted')[
+    ['famille', 'series_id', 'name', 'current', 'stress_final', 'weight', 'stress_weighted']
+].copy()
+top10.insert(0, 'Statut', top10['stress_weighted'].apply(status_emoji))
+top10['Tier'] = top10['weight'].apply(lambda w: 'T1' if w >= 2.5 else 'T2' if w >= 1.5 else 'T3')
+top10['Famille'] = top10['famille'].map(FAMILY_LABELS)
+top10['Z brut'] = top10['stress_final'].round(2)
+top10['Score'] = top10['stress_weighted'].round(2)
+top10['Valeur'] = top10['current'].apply(lambda v: f"{v:,.2f}" if abs(v) < 10000 else f"{v:,.0f}")
+display = top10[['Statut', 'Tier', 'Famille', 'series_id', 'name', 'Valeur', 'Z brut', 'Score']].rename(
+    columns={'series_id': 'Code', 'name': 'Indicateur'}
+)
+st.dataframe(display, hide_index=True, use_container_width=True, height=420)
 
+st.markdown("---")
+st.markdown("### Mouvements par famille (3 mois)")
+movements = []
+for fc in [c for c in hist_df.columns if c.startswith('fam_')]:
+    fname = fc.replace('fam_', '')
+    cur_v = hist_df[fc].iloc[-1]
+    prev_v = hist_df[fc].asof(hist_df.index[-1] - pd.DateOffset(months=3))
+    if pd.notna(prev_v):
+        movements.append({'famille': fname, 'delta': cur_v - prev_v})
 
-row2_col1, row2_col2 = st.columns(2)
-
-with row2_col1:
-    st.markdown("### Top 10 indicateurs stresses")
-    top10 = df.nlargest(10, 'stress_weighted')[
-        ['famille', 'series_id', 'name', 'current', 'stress_final', 'weight', 'stress_weighted']].copy()
-    top10.insert(0, 'Statut', top10['stress_weighted'].apply(status_emoji))
-    top10['Tier'] = top10['weight'].apply(lambda w: 'T1' if w >= 2.5 else 'T2' if w >= 1.5 else 'T3')
-    top10['Famille'] = top10['famille'].map(FAMILY_LABELS)
-    top10['Z brut'] = top10['stress_final'].round(2)
-    top10['Score'] = top10['stress_weighted'].round(2)
-    top10['Valeur'] = top10['current'].apply(lambda v: f"{v:,.2f}" if abs(v) < 10000 else f"{v:,.0f}")
-    display = top10[['Statut', 'Tier', 'Famille', 'series_id', 'name', 'Valeur', 'Z brut', 'Score']].rename(
-        columns={'series_id': 'Code', 'name': 'Indicateur'})
-    st.dataframe(display, hide_index=True, use_container_width=True, height=400)
-
-with row2_col2:
-    st.markdown("### Mouvements par famille (3 mois)")
-    movements = []
-    for fc in [c for c in hist_df.columns if c.startswith('fam_')]:
-        fname = fc.replace('fam_', '')
-        cur_v = hist_df[fc].iloc[-1]
-        prev_v = hist_df[fc].asof(hist_df.index[-1] - pd.DateOffset(months=3))
-        if pd.notna(prev_v):
-            movements.append({'famille': fname, 'delta': cur_v - prev_v})
-    mov_df = pd.DataFrame(movements).sort_values('delta', ascending=False)
-    fig = go.Figure()
-    colors = ['#ff4d87' if d > 0.1 else '#5eead4' if d < -0.1 else '#6f9b94' for d in mov_df['delta']]
-    labels = [f"{FAMILY_ICONS.get(f, '')} {FAMILY_LABELS.get(f, f)}" for f in mov_df['famille']]
-    fig.add_trace(go.Bar(y=labels[::-1], x=mov_df['delta'].values[::-1], orientation='h',
-                          marker_color=colors[::-1],
-                          text=[f"{d:+.2f}" for d in mov_df['delta'].values[::-1]],
-                          textposition='outside', textfont=dict(color='#f5f6f8', size=11)))
-    fig.add_vline(x=0, line_color='rgba(255,255,255,0.25)', line_width=1)
-    fig.update_layout(template='plotly_dark', plot_bgcolor='#1a1a1a', paper_bgcolor='#1a1a1a',
-                      height=400, margin=dict(l=10, r=40, t=10, b=10), showlegend=False,
-                      xaxis=dict(gridcolor='rgba(0,240,208,0.08)', title='Δ score sur 3 mois'),
-                      yaxis=dict(gridcolor='rgba(0,240,208,0.08)'))
-    st.plotly_chart(fig, use_container_width=True)
-
+mov_df = pd.DataFrame(movements).sort_values('delta', ascending=False)
+fig = go.Figure()
+colors = ['#ff4d87' if d > 0.1 else '#5eead4' if d < -0.1 else '#6f9b94' for d in mov_df['delta']]
+labels = [f"{FAMILY_ICONS.get(f, '')} {FAMILY_LABELS.get(f, f)}" for f in mov_df['famille']]
+fig.add_trace(go.Bar(
+    y=labels[::-1],
+    x=mov_df['delta'].values[::-1],
+    orientation='h',
+    marker_color=colors[::-1],
+    text=[f"{d:+.2f}" for d in mov_df['delta'].values[::-1]],
+    textposition='outside',
+    textfont=dict(color='#f5f6f8', size=11),
+))
+fig.add_vline(x=0, line_color='rgba(255,255,255,0.25)', line_width=1)
+fig.update_layout(
+    template='plotly_dark',
+    plot_bgcolor='#1a1a1a',
+    paper_bgcolor='#1a1a1a',
+    height=420,
+    margin=dict(l=10, r=70, t=10, b=10),
+    showlegend=False,
+    font=dict(color='#b8fff5'),
+    xaxis=dict(gridcolor='rgba(0,240,208,0.08)', title='Δ score sur 3 mois'),
+    yaxis=dict(gridcolor='rgba(0,240,208,0.08)'),
+)
+st.plotly_chart(fig, use_container_width=True)
 
 st.markdown("---")
 st.markdown("## 🔬 Détail par famille")
