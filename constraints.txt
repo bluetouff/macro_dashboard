@@ -1,4 +1,4 @@
-# Résolution validée le 2026-08-02 avec Python 3.11.
+# Résolution de production validée le 2026-08-03 avec Python 3.13.
 # Ce fichier contraint aussi les dépendances transitives de production et de CI.
 altair==6.2.2
 anyio==4.14.2
@@ -68,4 +68,5 @@ tomli_w==1.2.0
 typing_extensions==4.16.0
 urllib3==2.7.0
 uvicorn==0.52.1
+watchdog==6.0.0
 websockets==16.1.1
