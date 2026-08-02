@@ -19,6 +19,8 @@ snapshots/
 *.csv
 *.parquet
 *.db
+*.bak
+*.pre-*.bak
 
 # Notebooks et exports locaux
 *.ipynb_checkpoints/

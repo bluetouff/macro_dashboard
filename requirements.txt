@@ -1,6 +1,10 @@
-streamlit>=1.32.0
-fredapi>=0.5.1
-pandas>=2.0.0
-numpy>=1.24.0
-plotly>=5.18.0
-python-dateutil>=2.8.2
+-c constraints.txt
+
+streamlit==1.60.0
+fredapi==0.5.2
+pandas==3.0.5
+numpy==2.4.6
+plotly==6.9.0
+python-dateutil==2.9.0.post0
+pyarrow==24.0.0
+requests==2.34.2

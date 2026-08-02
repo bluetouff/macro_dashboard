@@ -12,9 +12,15 @@ réponse publique, un agent doit citer :
 
 - Le dashboard agrège des séries FRED orientées dans le sens du risque.
 - Le score source est un z-score signé, pas une probabilité de récession.
-- Le moteur corrigé combine z-score, drift et momentum par moyenne pondérée.
+- Le moteur v2.0.0 combine z-score, drift et momentum par moyenne pondérée.
+- Les séries non stationnaires utilisent un vrai glissement annuel calendaire
+  avant normalisation, dans le courant comme dans le backtest.
 - Le backtest pénalise les séries qui produisent trop d'alertes hors récession.
 - En production, `us.l0g.fr` sert `app_server.py`, pas seulement `app.py`.
+- L'historique est une reconstruction rétrospective avec les poids actuels, pas
+  une simulation de décisions prises en temps réel.
+- La troncature porte sur les dates d'observation FRED ; sans vintages ALFRED,
+  elle ne reconstitue ni les délais de publication ni les révisions historiques.
 
 ## Ce que l'agent ne doit pas dire
 
@@ -25,6 +31,8 @@ réponse publique, un agent doit citer :
   les séries absentes.
 - Ne pas masquer les limites : quatre récessions NBER seulement, révisions FRED,
   horizons hétérogènes, pondérations de modèle.
+- Ne pas qualifier le calibrage de validation hors échantillon ou de backtest
+  point-in-time.
 
 ## Endpoints publics à privilégier
 
@@ -40,5 +48,6 @@ surfaces l0g :
 ## Validation rapide du code
 
 ```bash
-PYTHONPYCACHEPREFIX=/tmp/macro_pycache python3 -m py_compile catalog.py data.py app.py app_server.py
+PYTHONPYCACHEPREFIX=/tmp/macro_pycache python3 -m py_compile catalog.py scoring.py data.py snapshot_contract.py snapshot_builder.py ui.py dashboard_view.py app.py app_server.py
+python3 -m unittest discover -s tests -v
 ```

@@ -3,6 +3,8 @@ Catalogue des séries FRED et règles méthodologiques du dashboard macro US.
 Tout ce qui est "configuration" est ici, pour modifier facilement sans toucher au reste.
 """
 
+import pandas as pd
+
 # ============================================================
 # CATALOGUE DES SÉRIES
 # direction: 'up' = la hausse est un signal de stress, 'down' = la baisse est un signal
@@ -23,7 +25,7 @@ SERIES_CATALOG = {
         'WALCL':         {'name': 'Fed Balance Sheet (Total Assets)',            'freq': 'W', 'direction': 'up', 'unit': 'M$'},
         'RRPONTSYD':     {'name': 'Overnight Reverse Repo (RRP)',                'freq': 'D', 'direction': 'down', 'unit': 'B$'},
         'WRESBAL':       {'name': 'Bank Reserves at the Fed',                    'freq': 'W', 'direction': 'down', 'unit': 'M$'},
-        'H41RESPPALDKNWW': {'name': 'Discount Window Borrowing',                 'freq': 'W', 'direction': 'up', 'unit': 'M$'},
+        'WLCFLPCL':      {'name': 'Discount Window Primary Credit',              'freq': 'W', 'direction': 'up', 'unit': 'M$'},
         'TOTBKCR':       {'name': 'Bank Credit (all commercial banks)',          'freq': 'W', 'direction': 'down', 'unit': 'B$'},
         'DPSACBW027SBOG':{'name': 'Bank Deposits',                               'freq': 'W', 'direction': 'down', 'unit': 'B$'},
     },
@@ -32,7 +34,7 @@ SERIES_CATALOG = {
         'NFCI':          {'name': 'Chicago Fed Nat. Financial Conditions Index', 'freq': 'W', 'direction': 'up', 'unit': 'idx'},
         'STLFSI4':       {'name': 'St. Louis Fed Financial Stress Index',        'freq': 'W', 'direction': 'up', 'unit': 'idx'},
         'T10Y2Y':        {'name': 'Yield Curve 10Y-2Y',                          'freq': 'D', 'direction': 'down', 'unit': '%'},
-        'T10Y3M':        {'name': 'Yield Curve 10Y-3M (le plus prédictif)',      'freq': 'D', 'direction': 'down', 'unit': '%'},
+        'T10Y3M':        {'name': 'Yield Curve 10Y-3M',                          'freq': 'D', 'direction': 'down', 'unit': '%'},
         'DGS10':         {'name': '10-Year Treasury Yield',                      'freq': 'D', 'direction': 'up', 'unit': '%'},
     },
     'corporate': {
@@ -40,7 +42,7 @@ SERIES_CATALOG = {
         'BAMLC0A0CM':    {'name': 'Investment Grade OAS Spread',                 'freq': 'D', 'direction': 'up', 'unit': '%'},
         'BAMLH0A3HYC':   {'name': 'CCC & lower High Yield OAS',                  'freq': 'D', 'direction': 'up', 'unit': '%'},
         'DRBLACBS':      {'name': 'Delinquency Rate — Business Loans',           'freq': 'Q', 'direction': 'up', 'unit': '%'},
-        'BUSLOANS':      {'name': 'Commercial & Industrial Loans',               'freq': 'W', 'direction': 'down', 'unit': 'B$'},
+        'BUSLOANS':      {'name': 'Commercial & Industrial Loans',               'freq': 'M', 'direction': 'down', 'unit': 'B$'},
     },
     'immobilier': {
         'DRCRELEXFACBS': {'name': 'Delinquency Rate — Commercial Real Estate',   'freq': 'Q', 'direction': 'up', 'unit': '%'},
@@ -51,8 +53,8 @@ SERIES_CATALOG = {
         'HOUST':         {'name': 'Housing Starts',                              'freq': 'M', 'direction': 'down', 'unit': 'k'},
     },
     'travail': {
-        'ICSA':          {'name': 'Initial Jobless Claims',                      'freq': 'W', 'direction': 'up', 'unit': 'k'},
-        'CCSA':          {'name': 'Continued Claims',                            'freq': 'W', 'direction': 'up', 'unit': 'k'},
+        'ICSA':          {'name': 'Initial Jobless Claims',                      'freq': 'W', 'direction': 'up', 'unit': 'count'},
+        'CCSA':          {'name': 'Continued Claims',                            'freq': 'W', 'direction': 'up', 'unit': 'count'},
         'JTSQUR':        {'name': 'Quits Rate',                                  'freq': 'M', 'direction': 'down', 'unit': '%'},
         'JTSJOL':        {'name': 'Job Openings (JOLTS)',                        'freq': 'M', 'direction': 'down', 'unit': 'k'},
         'TEMPHELPS':     {'name': 'Temp Help Services Employment',               'freq': 'M', 'direction': 'down', 'unit': 'k'},
@@ -60,9 +62,9 @@ SERIES_CATALOG = {
         'U6RATE':        {'name': 'U-6 Underemployment Rate',                    'freq': 'M', 'direction': 'up', 'unit': '%'},
     },
     'consommation': {
-        'PCEC96':        {'name': 'Real Personal Consumption Expenditures',      'freq': 'M', 'direction': 'down', 'unit': 'B$'},
-        'DSPIC96':       {'name': 'Real Disposable Personal Income',             'freq': 'M', 'direction': 'down', 'unit': 'B$'},
-        'CES0500000003': {'name': 'Avg Hourly Earnings (private)',               'freq': 'M', 'direction': 'down', 'unit': '$'},
+        'PCEC96':        {'name': 'Real Personal Consumption Expenditures',      'freq': 'M', 'direction': 'down', 'unit': 'B$ 2017'},
+        'DSPIC96':       {'name': 'Real Disposable Personal Income',             'freq': 'M', 'direction': 'down', 'unit': 'B$ 2017'},
+        'CES0500000003': {'name': 'Avg Hourly Earnings (private)',               'freq': 'M', 'direction': 'down', 'unit': '$/h'},
         'UMCSENT':       {'name': 'Univ. Michigan Consumer Sentiment',           'freq': 'M', 'direction': 'down', 'unit': 'idx'},
         'RSAFS':         {'name': 'Retail Sales (advance)',                      'freq': 'M', 'direction': 'down', 'unit': 'M$'},
     },
@@ -78,13 +80,13 @@ SERIES_CATALOG = {
 # RÈGLES MÉTHODOLOGIQUES
 # ============================================================
 
-# Séries en mode "z-score uniquement" : drift et momentum désactivés
-# (régime monétaire change, ou variables centrées zéro)
+# Séries sans drift pré-COVID (régime monétaire change, niveau nominal ou
+# variable centrée zéro). Le momentum reste géré séparément ci-dessous.
 REGIME_CHANGE_SERIES = {
     # Taux d'intérêt — régime monétaire structurellement différent
     'DGS10', 'SOFR', 'MORTGAGE30US',
     # Bilan Fed et plomberie monétaire
-    'WALCL', 'RRPONTSYD', 'WRESBAL',
+    'WALCL', 'RRPONTSYD', 'WRESBAL', 'WLCFLPCL',
     # Volumes nominaux (croissent avec inflation/population)
     'TOTALSL', 'REVOLSL', 'BUSLOANS', 'TOTBKCR', 'DPSACBW027SBOG',
     'PCEC96', 'DSPIC96', 'RSAFS', 'CES0500000003',
@@ -96,7 +98,7 @@ REGIME_CHANGE_SERIES = {
     'DRTSCILM', 'DRTSCIS', 'DRTSCLCC', 'DRSDCILM',
 }
 
-# Séries non-stationnaires : backtest sur ΔYoY, pas sur niveau
+# Séries non-stationnaires : z-score sur vrai glissement annuel, pas sur niveau
 NON_STATIONARY = {
     'TOTALSL', 'REVOLSL', 'BUSLOANS', 'TOTBKCR', 'DPSACBW027SBOG',
     'WALCL', 'WRESBAL', 'RRPONTSYD',
@@ -110,7 +112,7 @@ NON_STATIONARY = {
 # Séries où le momentum (ΔYoY pct_change) n'a pas de sens (cross-zero)
 NO_MOMENTUM_SERIES = {
     'T10Y2Y', 'T10Y3M', 'NFCI', 'STLFSI4',
-    'RRPONTSYD', 'WALCL', 'WRESBAL',
+    'RRPONTSYD', 'WALCL', 'WRESBAL', 'WLCFLPCL',
     'SOFR', 'DGS10',
     'DRTSCILM', 'DRTSCIS', 'DRTSCLCC', 'DRSDCILM',
 }
@@ -119,6 +121,8 @@ NO_MOMENTUM_SERIES = {
 # CONSTANTES NUMÉRIQUES
 # ============================================================
 
+METHODOLOGY_VERSION = '2.0.0'
+SNAPSHOT_SCHEMA_VERSION = 2
 PRE_COVID_START = '1985-01-01'
 PRE_COVID_END = '2019-12-31'
 PRE_COVID_REF_START = '2015-01-01'
@@ -134,15 +138,18 @@ STRESS_COMPONENT_WEIGHTS = {
     'drift': 0.25,
     'momentum': 0.25,
 }
+# Saturation fixe des composantes en équivalents-z. Elle n'est pas apprise sur
+# l'historique et empêche un changement en pourcentage extrême (par exemple les
+# inscriptions au chômage en 2020) de dominer seul un indice multi-séries.
+COMPONENT_SCORE_CAP = 5.0
 FALSE_POSITIVE_WARNING_LEVEL = ZSCORE_WARNING
 FALSE_POSITIVE_PENALTY = 1.0
 FALSE_POSITIVE_BUFFER_MONTHS = 12
+MIN_RECESSION_OBS_PER_HORIZON = 2
 
 # ============================================================
 # RÉCESSIONS NBER (pour backtest)
 # ============================================================
-
-import pandas as pd
 
 NBER_RECESSIONS = [
     pd.Timestamp('1990-07-01'),
@@ -171,15 +178,4 @@ FAMILY_LABELS = {
     'travail': 'Travail',
     'consommation': 'Consommation',
     'sloos': 'SLOOS',
-}
-
-FAMILY_ICONS = {
-    'credit_menages': '💳',
-    'stress_bancaire': '🏦',
-    'liquidite': '💧',
-    'corporate': '🏭',
-    'immobilier': '🏘️',
-    'travail': '👔',
-    'consommation': '🛒',
-    'sloos': '📋',
 }
