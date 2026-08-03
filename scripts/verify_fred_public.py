@@ -10,15 +10,21 @@ from __future__ import annotations
 
 import io
 import json
+import sys
 import time
 import zipfile
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import requests
 
-from catalog import SERIES_CATALOG
-from scoring import (
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from catalog import SERIES_CATALOG  # noqa: E402
+from scoring import (  # noqa: E402
     apply_weights,
     calibration_to_weight,
     compute_dashboard,
@@ -29,7 +35,11 @@ from scoring import (
     reconstruct_historical_score,
     zscore_input_series,
 )
-from snapshot_contract import validate_backtest, validate_current_snapshot, validate_historical
+from snapshot_contract import (  # noqa: E402
+    validate_backtest,
+    validate_current_snapshot,
+    validate_historical,
+)
 
 FRED_EXPORT_URL = 'https://fred.stlouisfed.org/graph/fredgraph.csv'
 FREQUENCY_PREFIX = {'D': 'daily', 'W': 'weekly', 'M': 'monthly', 'Q': 'quarterly'}

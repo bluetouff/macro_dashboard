@@ -17,6 +17,21 @@ par la série active de crédit primaire au discount window
 `BUSLOANS` en fréquence mensuelle et les unités de `ICSA` et `CCSA` en nombres
 bruts, conformément aux métadonnées FRED.
 
+## Rupture de série au 3 août 2026
+
+La mise en production de la méthode `2.0.0` constitue une rupture de série, pas
+une nouvelle observation macroéconomique. Dans la normalisation 0–100 publiée
+par l0g, la valeur est passée de `41` à `31` lors du premier snapshot v2. Ce
+mouvement reflète le changement simultané du moteur, du calibrage et du
+catalogue décrit ci-dessous ; il ne doit pas être interprété comme une détente
+de dix points survenue en une journée.
+
+Les snapshots antérieurs ne publiaient pas tous une révision complète du
+calculateur. Ils restent donc conservés comme preuves historiques legacy, mais
+ne permettent pas de décomposer exactement l'écart série par série et ne sont
+pas directement comparables aux valeurs v2. Toute mesure de variation doit
+segmenter l'historique au `2026-08-03`.
+
 ## 1. Préparation et sens du risque
 
 Pour chaque série, `direction` définit le signe qui transforme la donnée afin

@@ -31,6 +31,12 @@ class SecurityContractTests(unittest.TestCase):
         self.assertIn('gatherUsageStats = false', config)
         self.assertIn('showErrorDetails = "none"', config)
 
+    def test_methodology_discloses_the_v2_series_break(self) -> None:
+        methodology = (ROOT / 'docs' / 'METHODOLOGY.md').read_text(encoding='utf-8')
+        self.assertIn('Rupture de série au 3 août 2026', methodology)
+        self.assertIn('de `41` à `31`', methodology)
+        self.assertIn('segmenter l\'historique au `2026-08-03`', methodology)
+
     def test_world_readable_environment_file_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             path = Path(temporary) / 'env'

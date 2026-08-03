@@ -19,6 +19,9 @@ réponse publique, un agent doit citer :
 - En production, `us.l0g.fr` sert `app_server.py`, pas seulement `app.py`.
 - L'historique est une reconstruction rétrospective avec les poids actuels, pas
   une simulation de décisions prises en temps réel.
+- La méthode v2 est effective depuis le 3 août 2026 et crée une rupture de
+  série : le passage l0g normalisé de 41 à 31 ne représente pas une détente
+  macro en une journée. Les points antérieurs sont legacy et non comparables.
 - La troncature porte sur les dates d'observation FRED ; sans vintages ALFRED,
   elle ne reconstitue ni les délais de publication ni les révisions historiques.
 
@@ -27,6 +30,8 @@ réponse publique, un agent doit citer :
 - Ne pas présenter le score comme une prévision de récession à date fixe.
 - Ne pas comparer directement le score US Macro aux scores Dette US, Euro Macro
   ou Énergie sans rappeler la normalisation d'affichage.
+- Ne pas calculer une variation à travers la rupture méthodologique du
+  3 août 2026.
 - Ne pas recalculer un score depuis un sous-ensemble de séries sans mentionner
   les séries absentes.
 - Ne pas masquer les limites : quatre récessions NBER seulement, révisions FRED,

@@ -48,6 +48,13 @@ leur mise à jour doit être accompagnée des tests et de `pip-audit`.
 - pénalité de faux positifs hors récession ;
 - moyenne pondérée par série pour les scores famille et global.
 
+La mise en production de la v2 le 3 août 2026 constitue une rupture de série.
+Dans la normalisation 0–100 publiée par l0g, le premier snapshot v2 est passé de
+`41` à `31`. Cette baisse ne décrit pas une détente macro survenue en une
+journée : elle reflète le changement simultané du calculateur, du calibrage et
+du catalogue. Les points antérieurs doivent rester visibles comme historique
+legacy, mais aucune variation ne doit être calculée à travers cette rupture.
+
 L'historique est une reconstruction rétrospective avec les poids et les vintages
 FRED actuels. Les observations datées après chaque point sont exclues, mais les
 délais de publication et les révisions historiques ne sont pas rejoués comme
@@ -105,7 +112,7 @@ Un contrôle ponctuel de toutes les séries via l'export public officiel FRED,
 sans clé API, est aussi disponible :
 
 ```bash
-.venv/bin/python -m scripts.verify_fred_public
+.venv/bin/python scripts/verify_fred_public.py
 ```
 
 La CI applique ces contrôles sur chaque pull request et push vers `main`, sans
