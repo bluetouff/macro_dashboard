@@ -32,7 +32,7 @@ inject_theme()
 try:
     bundle = load_validated_bundle(str(SNAPSHOTS_DIR))
 except (SnapshotValidationError, OSError, ValueError) as exc:
-    LOG.error('Bundle de production refusé (%s)', type(exc).__name__)
+    LOG.error('Bundle de production refusé (%s): %s', type(exc).__name__, exc)
     render_header(query_view())
     st.error(
         'Le snapshot public ne satisfait pas le contrat de qualité. '

@@ -129,6 +129,29 @@ class SnapshotContractTests(unittest.TestCase):
         with self.assertRaisesRegex(SnapshotValidationError, 'couverture FRED incomplète'):
             validate_current_snapshot(current.iloc[:-1])
 
+    def test_known_publication_lags_are_accepted_without_relaxing_other_monthly_series(self) -> None:
+        current, _, _ = fixture_frames()
+        as_of = pd.Timestamp('2026-08-05')
+        current['date'] = as_of
+        current.loc[current['series_id'].isin({'TOTALSL', 'REVOLSL', 'CSUSHPINSA'}), 'date'] = pd.Timestamp(
+            '2026-05-01'
+        )
+
+        validate_current_snapshot(current, as_of=as_of)
+
+        current.loc[current['series_id'] == 'PSAVERT', 'date'] = pd.Timestamp('2026-05-01')
+        with self.assertRaisesRegex(SnapshotValidationError, 'PSAVERT:96j>95j'):
+            validate_current_snapshot(current, as_of=as_of)
+
+    def test_publication_lag_overrides_remain_fail_closed(self) -> None:
+        current, _, _ = fixture_frames()
+        as_of = pd.Timestamp('2026-09-04')
+        current['date'] = as_of
+        current.loc[current['series_id'] == 'CSUSHPINSA', 'date'] = pd.Timestamp('2026-05-01')
+
+        with self.assertRaisesRegex(SnapshotValidationError, 'CSUSHPINSA:126j>125j'):
+            validate_current_snapshot(current, as_of=as_of)
+
     def test_catalog_metadata_mismatch_is_rejected(self) -> None:
         current, _, _ = fixture_frames()
         current.loc[0, 'unit'] = 'inventée'

@@ -75,6 +75,11 @@ Un bundle n'est publié que si les 47 séries, le backtest, l'historique et leur
 métadonnées passent le contrat. Les fichiers sont promus avant le manifest, ce
 qui rend une lecture concurrente vérifiable et fail-closed.
 
+La fraîcheur est contrôlée par fréquence et, pour les publications
+structurellement retardées, par série. Les plafonds spécifiques à `TOTALSL`,
+`REVOLSL` (G.19 Consumer Credit) et `CSUSHPINSA` (Case-Shiller) couvrent leur
+calendrier officiel sans assouplir le seuil des autres séries mensuelles.
+
 ## Production `us.l0g.fr`
 
 Le service public lance :

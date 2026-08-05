@@ -62,6 +62,16 @@ ALLOWED_WEIGHTS = {0.5, 1.0, 1.5, 2.0, 2.5, 3.0}
 SHA_PATTERN = re.compile(r'^[0-9a-f]{40}$')
 SHA256_PATTERN = re.compile(r'^[0-9a-f]{64}$')
 FRESHNESS_MAX_DAYS = {'D': 14, 'W': 35, 'M': 95, 'Q': 240}
+# Certaines publications mensuelles officielles arrivent structurellement plus
+# tard que les autres. Le G.19 publie le crédit à la consommation avec environ
+# deux mois de décalage et Case-Shiller avec près de trois mois. Ces plafonds
+# restent bornés et propres aux séries : ils évitent de relâcher le contrat pour
+# l'ensemble du catalogue lorsqu'un calendrier de publication est légitime.
+FRESHNESS_MAX_DAYS_BY_SERIES = {
+    'TOTALSL': 105,
+    'REVOLSL': 105,
+    'CSUSHPINSA': 125,
+}
 
 
 class SnapshotValidationError(RuntimeError):
@@ -111,7 +121,7 @@ def _finite_column(frame: pd.DataFrame, column: str) -> pd.Series:
     return pd.Series(np.isfinite(values), index=frame.index)
 
 
-def validate_current_snapshot(frame: pd.DataFrame) -> None:
+def validate_current_snapshot(frame: pd.DataFrame, *, as_of: pd.Timestamp | None = None) -> None:
     expected = expected_series_ids()
     _require(not frame.empty, 'snapshot courant vide')
     _require(CURRENT_REQUIRED_COLUMNS <= set(frame.columns), 'colonnes du snapshot courant incomplètes')
@@ -137,12 +147,17 @@ def validate_current_snapshot(frame: pd.DataFrame) -> None:
         np.allclose(frame['stress_weighted'].astype(float), expected_weighted, rtol=1e-10, atol=1e-12),
         'stress_weighted ne correspond pas à stress_final × weight',
     )
+    reference = pd.Timestamp.now() if as_of is None else pd.Timestamp(as_of)
+    if reference.tzinfo is not None:
+        reference = reference.tz_convert(None)
     dates = pd.to_datetime(frame['date'], errors='coerce')
     _require(dates.notna().all(), 'date source invalide')
-    _require((dates <= pd.Timestamp.now() + pd.Timedelta(days=1)).all(), 'date source située dans le futur')
-    ages = (pd.Timestamp.now().normalize() - dates.dt.tz_localize(None).dt.normalize()).dt.days
+    _require((dates <= reference + pd.Timedelta(days=1)).all(), 'date source située dans le futur')
+    ages = (reference.normalize() - dates.dt.tz_localize(None).dt.normalize()).dt.days
     max_ages = frame['freq'].map(FRESHNESS_MAX_DAYS)
     _require(max_ages.notna().all(), 'fréquence sans contrat de fraîcheur')
+    series_overrides = frame['series_id'].map(FRESHNESS_MAX_DAYS_BY_SERIES)
+    max_ages = series_overrides.fillna(max_ages).astype(int)
     stale = ages > max_ages
     stale_details = ','.join(
         f'{series_id}:{int(age)}j>{int(limit)}j'
