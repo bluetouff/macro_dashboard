@@ -1,5 +1,5 @@
 -r requirements.txt
-pip==26.1.2
+pip==26.2
 setuptools==83.0.0
 bandit==1.9.4
 pip-audit==2.10.1
