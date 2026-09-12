@@ -1,6 +1,7 @@
 -c constraints.txt
 
 streamlit==1.60.0
+GitPython==3.1.59
 fredapi==0.5.2
 pandas==3.0.5
 numpy==2.4.6
