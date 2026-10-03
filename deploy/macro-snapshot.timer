@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh US Macro daily and catch up after downtime
+
+[Timer]
+OnCalendar=*-*-* 06:00:00
+Persistent=true
+AccuracySec=1min
+Unit=macro-snapshot.service
+
+[Install]
+WantedBy=timers.target

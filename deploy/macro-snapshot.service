@@ -1,0 +1,38 @@
+[Unit]
+Description=Collect and validate the complete US Macro FRED snapshot
+Wants=network-online.target
+After=network-online.target
+OnSuccess=l0g-risk.service
+# A prolonged upstream outage must not suppress subsequent recovery attempts.
+StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+User=usdashboard
+Group=usdashboard
+WorkingDirectory=/opt/macro_dashboard
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/opt/macro_dashboard/venv/bin/python /opt/macro_dashboard/snapshot_builder.py
+# Bounds the whole collection, including DNS and all per-series retries.
+TimeoutStartSec=15min
+TimeoutStopSec=30s
+Restart=on-failure
+RestartSec=15min
+KillMode=control-group
+UMask=0027
+StandardOutput=journal
+StandardError=journal
+NoNewPrivileges=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectSystem=strict
+ReadWritePaths=/var/lib/macro_dashboard/snapshots
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6

@@ -103,6 +103,33 @@ Ce dépôt ne suppose pas qu'un build réussi prouve le déploiement. Le SHA exp
 par le dashboard doit correspondre au checkout actif et au calculateur du
 snapshot.
 
+### Supervision de la collecte
+
+`deploy/macro-snapshot.timer` conserve la collecte quotidienne à 06:00, heure
+du serveur. Son état persistant rattrape une exécution manquée pendant un arrêt.
+Le service réutilise le builder et son compte `usdashboard` : il ne modifie ni
+la méthode, ni les 47 séries exigées, ni les plafonds de fraîcheur.
+
+Une exécution complète est limitée à 15 minutes, puis dispose de 30 secondes
+pour se terminer. Un échec, y compris un dépassement de délai, entraîne une
+nouvelle tentative 15 minutes plus tard. Il n'y a qu'un collecteur systemd à la
+fois. Une réussite déclenche l'agrégateur l0g ; les erreurs restent consultables
+avec `journalctl -u macro-snapshot.service`. `network-online.target` ne garantit
+pas la disponibilité de DNS ou de FRED : la reprise après échec reste nécessaire.
+
+L'installateur `deploy/install-snapshot-scheduler.sh <SHA complet>` est une
+migration unique du cron Zen vérifié le 3 octobre 2026. L'administrateur le lance
+depuis un checkout propre du SHA indiqué. Il refuse un cron modifié, des unités
+déjà présentes ou une collecte active, conserve le cron et une commande de
+rollback, puis active le timer et demande une collecte immédiate. Il ne touche
+ni au service web, ni au réseau, ni aux clés, ni aux fichiers de données.
+
+`SCHEDULER_INSTALLED` atteste seulement l'installation : attendre la réussite de
+la collecte, puis vérifier la date du snapshot et `timelinessStatus` sur
+`https://l0g.fr/api/v1/risk.json`. Le rollback refuse d'interrompre une collecte
+en cours de publication. Les trois remplacements Parquet et celui du manifest
+restent distincts : le lecteur existant refuse un mélange de générations.
+
 ## Validation complète
 
 ```bash
