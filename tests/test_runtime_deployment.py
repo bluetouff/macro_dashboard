@@ -29,6 +29,7 @@ class RuntimeDeploymentTests(unittest.TestCase):
             self.assertLess(source.index(check), source.index('mv -- "$active/venv" "$rollback_venv"'))
         self.assertLess(source.index('trap recover EXIT'), source.index('systemctl stop "$timer"'))
         self.assertIn('mv -- "$rollback_venv" "$active/venv"', source)
+        self.assertIn("trap 'exit 129' HUP", source)
         self.assertIn('cmp -- "$backup/calculator-sha" "$active/DEPLOYED_SHA"', source)
         self.assertNotIn('snapshot_builder.py" --', source)
 

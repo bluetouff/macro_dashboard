@@ -118,7 +118,7 @@ old_moved=0
 committed=0
 recover() {
     local result=$?
-    trap - EXIT INT TERM
+    trap - EXIT HUP INT TERM
     set +e
     if (( committed == 0 && old_moved == 1 )); then
         systemctl stop "$service"
@@ -138,6 +138,7 @@ recover() {
     exit "$result"
 }
 trap recover EXIT
+trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
@@ -168,7 +169,7 @@ systemctl is-active --quiet "$service"
 committed=1
 systemctl start "$timer"
 systemctl is-active --quiet "$timer"
-trap - EXIT INT TERM
+trap - EXIT HUP INT TERM
 echo "DEPENDENCIES_DEPLOYMENT_OK $release_sha"
 echo "ROLLBACK_VENV $rollback_venv"
 echo "CONFIG_BACKUP $backup"
