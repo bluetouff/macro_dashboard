@@ -85,7 +85,7 @@ calendrier officiel sans assouplir le seuil des autres séries mensuelles.
 Le service public lance :
 
 ```text
-/opt/macro_dashboard/venv/bin/streamlit run /opt/macro_dashboard/app_server.py
+/opt/macro_dashboard/venv/bin/python -m streamlit run /opt/macro_dashboard/app_server.py
 ```
 
 Procédure de release recommandée :
@@ -102,6 +102,28 @@ Procédure de release recommandée :
 Ce dépôt ne suppose pas qu'un build réussi prouve le déploiement. Le SHA exposé
 par le dashboard doit correspondre au checkout actif et au calculateur du
 snapshot.
+
+### Release de dépendances uniquement
+
+Après validation locale et CI du SHA exact, un administrateur peut lancer
+`sudo bash deploy/update-runtime-dependencies.sh <SHA complet>` depuis son
+checkout propre sur le serveur. Ce script refuse toute différence entre le
+code applicatif candidat et le code réellement actif. Il construit un nouvel
+environnement Python à son emplacement définitif, installe les pins sans
+privilèges root, exécute les tests et relit le snapshot existant avant de basculer.
+
+Le timer est suspendu uniquement pendant la bascule et rétabli ensuite ; une
+collecte active ou un retry en attente bloque la bascule sans interrompre le
+builder. L'ancien environnement est conservé et restauré automatiquement si
+les contrôles d'activation échouent. Aucun snapshot, secret, fichier d'unité ou
+manifeste de l'agrégateur l0g n'est réécrit.
+
+`venv/DEPENDENCIES_SOURCE_SHA` identifie les nouveaux pins ; `DEPLOYED_SHA` et
+le SHA du snapshot continuent d'identifier le calculateur inchangé. Les pins
+effectivement installés sont dans `venv/release/requirements.txt` et
+`venv/release/constraints.txt`. Le script est volontairement limité au premier
+remplacement d'un venv classique : un candidat déjà présent ou un venv déjà
+symbolique impose une inspection avant toute nouvelle activation.
 
 ### Supervision de la collecte
 
