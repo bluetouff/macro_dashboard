@@ -74,14 +74,14 @@ def _chart_layout(*, height: int = 410) -> dict[str, Any]:
         'paper_bgcolor': COLORS['bg'],
         'plot_bgcolor': COLORS['bg'],
         'font': {
-            'family': 'Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif',
+            'family': 'JetBrains Mono Variable, ui-monospace, monospace',
             'color': COLORS['muted'],
             'size': 11,
         },
         'hoverlabel': {
             'bgcolor': COLORS['surface'],
             'bordercolor': 'rgba(255,255,255,.18)',
-            'font': {'color': COLORS['paper'], 'family': 'SFMono-Regular, Menlo, monospace'},
+            'font': {'color': COLORS['paper'], 'family': 'JetBrains Mono Variable, ui-monospace, monospace'},
         },
         'xaxis': {
             'showgrid': False,
@@ -209,7 +209,7 @@ def _render_family_chart(current: pd.DataFrame) -> None:
             marker={'color': colors, 'line': {'width': 0}},
             text=[_format_score(value) for value in scores['score']],
             textposition='outside',
-            textfont={'family': 'SFMono-Regular, Menlo, monospace', 'color': COLORS['paper'], 'size': 10},
+            textfont={'family': 'JetBrains Mono Variable, ui-monospace, monospace', 'color': COLORS['paper'], 'size': 10},
             hovertemplate='%{y}<br>score %{x:+.2f}<extra></extra>',
         )
     )
@@ -294,11 +294,14 @@ def _render_top_tensions(current: pd.DataFrame) -> None:
     cards = []
     for rank, row in enumerate(top.itertuples(index=False), start=1):
         cards.append(
-            f'<strong>{rank:02d} · {escape(str(row.series_id))}</strong> '
-            f'{escape(str(row.name))} · score {_format_score(row.stress_final)} · poids {float(row.weight):.1f}'
+            '<div class="tension-row"><div class="tension-info">'
+            f'<div class="tension-series"><span class="tension-rank">{rank:02d}</span>{escape(str(row.series_id))}</div>'
+            f'<div class="tension-name">{escape(str(row.name))}</div></div>'
+            f'<div class="tension-measure"><strong>{_format_score(row.stress_final)}</strong>'
+            f'<span>poids {float(row.weight):.1f}</span></div></div>'
         )
     st.markdown(
-        '<div class="insight-card">' + '<br>'.join(cards) + '</div>',
+        '<div class="tension-list">' + ''.join(cards) + '</div>',
         unsafe_allow_html=True,
     )
 
@@ -306,6 +309,12 @@ def _render_top_tensions(current: pd.DataFrame) -> None:
 def render_method_faq(metadata: dict[str, Any]) -> None:
     render_header('faq')
     render_hero(metadata)
+    with st.container(key='method_panel'):
+        _render_method_sections()
+    render_footer(metadata)
+
+
+def _render_method_sections() -> None:
     section_heading(
         'Une méthode lisible, versionnée, réfutable',
         'Le score organise les signaux. Il ne produit ni probabilité de récession, ni date cible, ni conseil d’investissement.',
@@ -340,7 +349,6 @@ def render_method_faq(metadata: dict[str, Any]) -> None:
 """,
         unsafe_allow_html=True,
     )
-    render_footer(metadata)
 
 
 def render_dashboard(
@@ -355,32 +363,37 @@ def render_dashboard(
     render_quality_banner(metadata)
     _render_kpis(current, historical)
 
-    section_heading(
-        'Trajectoire du stress composite',
-        'Reconstruction mensuelle avec les vintages FRED actuels, tronquée par date d’observation. Bandes grises : récessions NBER. Il ne s’agit pas d’un backtest point-in-time.',
-        'trend',
-    )
-    _render_historical_chart(historical)
+    with st.container(key='summary_panels'):
+        trajectory, tensions = st.columns([1.15, 0.85], gap='medium')
+        with trajectory, st.container(key='trajectory_panel'):
+            section_heading(
+                'Trajectoire du stress composite',
+                'Reconstruction mensuelle avec les vintages FRED actuels, tronquée par date d’observation. Bandes grises : récessions NBER. Il ne s’agit pas d’un backtest point-in-time.',
+                'trend',
+            )
+            _render_historical_chart(historical)
+        with tensions, st.container(key='tensions_panel'):
+            section_heading(
+                'Tensions dominantes',
+                'Classement par score composite de série. Le poids empirique intervient ensuite dans l’agrégation globale.',
+                'pulse',
+            )
+            _render_top_tensions(current)
 
-    section_heading(
-        'Lecture par famille',
-        'Moyenne pondérée des séries valides de chaque bloc. Le pic signale la série la plus tendue, sans se substituer à la moyenne.',
-        'layers',
-    )
-    _render_family_cards(current)
-    _render_family_chart(current)
+    with st.container(key='families_panel'):
+        section_heading(
+            'Lecture par famille',
+            'Moyenne pondérée des séries valides de chaque bloc. Le pic signale la série la plus tendue, sans se substituer à la moyenne.',
+            'layers',
+        )
+        _render_family_cards(current)
+        _render_family_chart(current)
 
-    section_heading(
-        'Tensions dominantes',
-        'Classement par score composite de série. Le poids empirique intervient ensuite dans l’agrégation globale.',
-        'pulse',
-    )
-    _render_top_tensions(current)
-
-    section_heading(
-        'Registre des indicateurs',
-        'Valeur source, composantes, score, poids et taux de faux positifs sont exposés pour audit. Les cases vides correspondent à des composantes volontairement non applicables.',
-        'table',
-    )
-    _render_detail(current, backtest)
+    with st.container(key='indicators_panel'):
+        section_heading(
+            'Registre des indicateurs',
+            'Valeur source, composantes, score, poids et taux de faux positifs sont exposés pour audit. Les cases vides correspondent à des composantes volontairement non applicables.',
+            'table',
+        )
+        _render_detail(current, backtest)
     render_footer(metadata)
