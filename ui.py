@@ -286,7 +286,7 @@ def render_hero(metadata: dict[str, Any]) -> None:
         f"""
 <section class="hero">
   <div class="eyebrow">Macro risk intelligence · États-Unis</div>
-  <h1>Lire le stress macro.<br><em>Mesurer, pas prédire.</em></h1>
+  <h1><em>Stress macro US</em></h1>
   <div class="hero-copy">Un radar méthodologique fondé sur les séries FRED, orientées dans le sens du risque et agrégées sans masquer leur couverture ni leurs limites.</div>
   <div class="proof-strip">
     <span class="proof-item"><span class="proof-dot"></span> données {escape(str(metadata.get('source', 'FRED')))}</span>
