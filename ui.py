@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+from base64 import b64encode
 from datetime import UTC, datetime
 from html import escape
+from pathlib import Path
 from typing import Any
 
 import streamlit as st
@@ -47,7 +49,21 @@ def configure_page() -> None:
 
 def inject_theme() -> None:
     """Injecte la charte l0g sans police, script ou tracker externe."""
+    brand_font = b64encode(
+        (Path(__file__).parent / 'assets' / 'fonts' / 'jetbrains-mono-latin-wght-normal.woff2').read_bytes()
+    ).decode('ascii')
     st.markdown(
+        f'''
+<style>
+@font-face {{
+  font-family: "JetBrains Mono Variable";
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url("data:font/woff2;base64,{brand_font}") format("woff2");
+}}
+</style>
+''' +
         """
 <style>
 :root {
@@ -93,16 +109,28 @@ header[data-testid="stHeader"], div[data-testid="stToolbar"], #MainMenu, footer 
 }
 .brand-lockup { display: flex; align-items: center; gap: 15px; min-width: 0; }
 .brand-logo {
-  color: var(--bright) !important;
-  font-family: var(--mono);
-  font-size: clamp(1.85rem, 3vw, 2.5rem);
-  font-weight: 570;
+  display: inline-flex;
+  flex: none;
+  align-items: baseline;
+  color: var(--paper) !important;
+  font-family: "JetBrains Mono Variable", ui-monospace, "SFMono-Regular", monospace;
+  font-size: clamp(1.45rem, 3vw, 2rem);
+  font-weight: 700;
   line-height: 1;
-  letter-spacing: -.08em;
+  letter-spacing: -.04em;
   text-decoration: none !important;
   white-space: nowrap;
 }
-.brand-logo .cursor { color: var(--signal); }
+.brand-logo .brand-0 { color: var(--signal); text-shadow: 0 0 18px rgba(94,234,212,.45); }
+.brand-logo .brand-cursor {
+  display: inline-block;
+  margin-left: .12em;
+  color: var(--accent);
+  text-shadow: 0 0 18px rgba(255,77,135,.45);
+  animation: brand-blink 1.05s steps(2, start) infinite;
+}
+@keyframes brand-blink { to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .brand-logo .brand-cursor { animation: none; } }
 .brand-rule { width: 1px; height: 36px; background: var(--line-strong); }
 .product-name { color: var(--paper); font-size: .78rem; font-weight: 520; letter-spacing: .13em; text-transform: uppercase; }
 .product-scope { color: var(--muted); font-family: var(--mono); font-size: .64rem; margin-top: 4px; }
@@ -235,7 +263,6 @@ a { color: var(--signal); }
   .footer-links a { margin: 0 13px 0 0; }
 }
 @media (max-width: 410px) {
-  .brand-logo { font-size: 1.85rem; }
   .brand-lockup { gap: 10px; }
   .kpi-grid { grid-template-columns: 1fr; }
 }
@@ -259,7 +286,7 @@ def render_header(view: str) -> None:
         f"""
 <header class="macro-header">
   <div class="brand-lockup">
-    <a class="brand-logo" href="https://l0g.fr" target="_blank" rel="noopener noreferrer" aria-label="l0g.fr">l0g<span class="cursor">_</span></a>
+    <a class="brand-logo" href="https://l0g.fr" target="_blank" rel="noopener noreferrer" aria-label="l0g.fr"><span>l</span><span class="brand-0">0</span><span>g</span><span class="brand-cursor" aria-hidden="true">_</span></a>
     <span class="brand-rule" aria-hidden="true"></span>
     <div><div class="product-name">US Macro Risk Monitor</div><div class="product-scope">47 séries · 8 familles · source FRED</div></div>
   </div>
@@ -286,7 +313,7 @@ def render_hero(metadata: dict[str, Any]) -> None:
         f"""
 <section class="hero">
   <div class="eyebrow">Macro risk intelligence · États-Unis</div>
-  <h1><em>Stress macro US</em></h1>
+  <h1><em>Stress</em> <span>macro US</span></h1>
   <div class="hero-copy">Un radar méthodologique fondé sur les séries FRED, orientées dans le sens du risque et agrégées sans masquer leur couverture ni leurs limites.</div>
   <div class="proof-strip">
     <span class="proof-item"><span class="proof-dot"></span> données {escape(str(metadata.get('source', 'FRED')))}</span>
