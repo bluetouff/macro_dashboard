@@ -8,8 +8,10 @@ import unittest
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import patch
+from xml.etree import ElementTree
 
 import pandas as pd
+from streamlit.commands.page_config import _get_favicon_string
 from streamlit.testing.v1 import AppTest
 
 import dashboard_view
@@ -20,6 +22,39 @@ SCRIPT = ROOT / 'deploy/update-hero-title.sh'
 
 
 class BrandingTests(unittest.TestCase):
+    def test_page_config_embeds_canonical_l0g_favicon(self) -> None:
+        asset = (ROOT / 'assets/favicon.svg').read_bytes()
+        self.assertEqual(
+            hashlib.sha256(asset).hexdigest(),
+            '73ff2df7e3dcc29516c8fc89cfe50c54bfaa95861930027b862d742740a32fb5',
+        )
+        with patch.object(ui.st, 'set_page_config') as configure:
+            ui.configure_page()
+        self.assertEqual(configure.call_args.kwargs['page_icon'].encode('utf-8'), asset)
+        favicon = _get_favicon_string(configure.call_args.kwargs['page_icon'])
+        prefix = 'data:image/svg+xml;base64,'
+        self.assertTrue(favicon.startswith(prefix))
+        self.assertEqual(base64.b64decode(favicon[len(prefix):], validate=True), asset)
+
+    def test_favicon_is_self_contained_svg(self) -> None:
+        # Trusted repository fixture, never external XML input.
+        root = ElementTree.fromstring((ROOT / 'assets/favicon.svg').read_bytes())  # noqa: S314
+        self.assertEqual(root.attrib['viewBox'], '0 0 64 64')
+        allowed_attributes = {
+            'viewBox', 'width', 'height', 'rx', 'fill', 'x', 'y', 'text-anchor',
+            'dominant-baseline', 'font-family', 'font-size', 'font-weight',
+        }
+        for element in root.iter():
+            self.assertIn(element.tag, {f'{{http://www.w3.org/2000/svg}}{tag}' for tag in ('svg', 'rect', 'text')})
+            self.assertLessEqual(set(element.attrib), allowed_attributes)
+
+    def test_missing_favicon_does_not_silently_fall_back(self) -> None:
+        with patch.object(Path, 'read_text', side_effect=FileNotFoundError('favicon')):
+            with patch.object(ui.st, 'set_page_config') as configure:
+                with self.assertRaises(FileNotFoundError):
+                    ui.configure_page()
+                configure.assert_not_called()
+
     def test_hero_only_emphasizes_stress(self) -> None:
         with patch.object(ui.st, 'markdown') as render:
             ui.render_hero({})
@@ -141,6 +176,7 @@ render_method_faq(metadata)
             ('view_new_hash', ROOT / 'dashboard_view.py'),
             ('font_hash', ROOT / 'assets/fonts/jetbrains-mono-latin-wght-normal.woff2'),
             ('license_hash', ROOT / 'assets/fonts/OFL.txt'),
+            ('favicon_hash', ROOT / 'assets/favicon.svg'),
         ):
             pinned = re.search(rf'^{variable}=([0-9a-f]{{64}})$', script, re.MULTILINE)
             self.assertIsNotNone(pinned)
@@ -153,7 +189,7 @@ render_method_faq(metadata)
         self.assertEqual(result.returncode, 0, result.stderr)
         script = SCRIPT.read_text()
         self.assertIn('cmp -- "$backup/calculator-sha" "$active/DEPLOYED_SHA"', script)
-        self.assertIn('"$old_hash"|"$title_hash"|"$brand_hash")', script)
+        self.assertIn('"$old_hash"|"$title_hash"|"$brand_hash"|"$design_hash"|"$new_hash")', script)
         self.assertLess(script.index('trap recover EXIT'), script.index('assets_changed=1'))
         self.assertLess(
             script.index('install -o root -g usdashboard -m 0640 "$backup/new-font.woff2"'),
@@ -167,3 +203,10 @@ render_method_faq(metadata)
             script.index('systemctl stop "$service"\nmv -f'),
             script.index('mv -f -- "$candidate" "$live"\nmv -f'),
         )
+        self.assertLess(script.index('trap recover EXIT'), script.index('favicon_changed=1'))
+        self.assertLess(
+            script.index('install -o root -g usdashboard -m 0640 "$backup/new-favicon.svg"'),
+            script.index('changed=1\nsystemctl stop'),
+        )
+        self.assertIn('favicon_changed == 1 && ui_restored == 1', script)
+        self.assertIn('"$active/$favicon_path" "$backup/failed-favicon.svg"', script)

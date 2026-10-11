@@ -41,6 +41,7 @@ def icon(name: str, *, size: int = 20) -> str:
 def configure_page() -> None:
     st.set_page_config(
         page_title='US Macro Risk Monitor · l0g',
+        page_icon=(Path(__file__).parent / 'assets/favicon.svg').read_text(encoding='utf-8'),
         layout='wide',
         initial_sidebar_state='collapsed',
         menu_items=None,
