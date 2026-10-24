@@ -28,6 +28,19 @@ class GitPythonSecurityTests(unittest.TestCase):
             self.repo, Submodule.NULL_BIN_SHA, name='module', path=path, url='unused'
         )
 
+    def test_git_metadata_paths_are_rejected_before_clone(self) -> None:
+        # GHSA-83vg-56qc-22m7: intercept the clone sink, never clone or install hooks.
+        for path in ('.git/hooks', '.git/config', 'nested/.git/hooks'):
+            with self.subTest(path=path), patch.object(
+                Submodule, '_clone_repo', side_effect=AssertionError('clone attempted')
+            ) as clone:
+                before = {p.relative_to(self.root): p.read_bytes() for p in self.root.rglob('*') if p.is_file()}
+                with self.assertRaises(ValueError):
+                    self.repo.create_submodule('module', path, url='unused')
+                clone.assert_not_called()
+                after = {p.relative_to(self.root): p.read_bytes() for p in self.root.rglob('*') if p.is_file()}
+                self.assertEqual(after, before)
+
     def test_update_rejects_outside_checkout_paths_before_clone(self) -> None:
         outside = self.root / 'outside'
         for path in ('../outside', 'nested/../../outside', str(outside)):
@@ -99,8 +112,7 @@ class GitPythonSecurityTests(unittest.TestCase):
         script = self.root / 'parent' / 'app.py'
         script.write_text('# local fixture\n', encoding='utf-8')
         repo = GitRepo(str(script))
-        self.assertIsNotNone(repo.repo)
-        self.addCleanup(repo.repo.close)
+        self.assertTrue(repo.is_repo)
         self.assertTrue(repo.is_valid())
         self.assertEqual(repo.module, 'app.py')
         self.assertIn('app.py', repo.untracked_files)

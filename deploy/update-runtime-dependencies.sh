@@ -23,7 +23,20 @@ timer=macro-snapshot.timer
 exec 9>/run/lock/macro-runtime-deployment.lock
 flock -n 9 || fail 'Un autre déploiement est en cours.'
 [[ -d $active && ! -L $active ]] || fail 'Arborescence active inattendue.'
-[[ -d $active/venv && ! -L $active/venv ]] || fail 'Premier remplacement uniquement : venv actif inattendu.'
+validate_active_venv() {
+    [[ -d $active/venv ]] || fail 'Venv actif absent.'
+    if [[ -L $active/venv ]]; then
+        local target
+        target=$(readlink -- "$active/venv")
+        [[ $target =~ ^runtime-[0-9a-f]{40}$ ]] || fail 'Lien venv actif inattendu.'
+        [[ -d $active/$target && ! -L $active/$target ]] || fail 'Runtime actif inattendu.'
+        [[ -f $active/$target/DEPENDENCIES_SOURCE_SHA && ! -L $active/$target/DEPENDENCIES_SOURCE_SHA ]] \
+            || fail 'Provenance du runtime absente.'
+        [[ $(< "$active/$target/DEPENDENCIES_SOURCE_SHA") == "${target#runtime-}" ]] \
+            || fail 'Provenance du runtime incohérente.'
+    fi
+}
+validate_active_venv
 [[ ! -e $runtime && ! -L $runtime ]] || fail 'Candidat déjà présent ; inspection requise.'
 [[ ! -e /etc/cron.d/macro_dashboard ]] || fail 'Cron historique encore actif.'
 systemctl is-active --quiet "$service" || fail 'Serveur initialement inactif.'
@@ -63,11 +76,29 @@ chmod -R go-w "$payload"
 assert_same_code() {
     local file
     for file in app.py app_server.py catalog.py dashboard_view.py data.py scoring.py \
-        snapshot_builder.py snapshot_contract.py ui.py .streamlit/config.toml; do
+        snapshot_builder.py snapshot_contract.py ui.py .streamlit/config.toml \
+        assets/favicon.svg assets/fonts/jetbrains-mono-latin-wght-normal.woff2 assets/fonts/OFL.txt; do
         cmp -- "$payload/$file" "$active/$file" || fail "Code actif différent : $file. Release complète requise."
     done
 }
 assert_same_code
+# Bootstrap offline from the PyPI wheel's pinned SHA256. The ensurepip copy of
+# pip may still trust the compromised emSign G3 root; do not use it for downloads.
+# Source: https://pypi.org/pypi/pip/26.2.2/json
+pip_bootstrap=$(mktemp -d /var/tmp/macro-pip.XXXXXXXX)
+chown root:usdashboard "$pip_bootstrap"
+chmod 0750 "$pip_bootstrap"
+pip_wheel="$pip_bootstrap/pip-26.2.2-py3-none-any.whl"
+curl --fail --silent --show-error --proto '=https' --max-time 60 \
+    https://files.pythonhosted.org/packages/3f/06/3e4420302363fbb71be3c7f35ce042f54bfca330e3e66b3a2e3c4cca579f/pip-26.2.2-py3-none-any.whl \
+    --output "$pip_wheel"
+[[ $(sha256sum "$pip_wheel" | cut -d ' ' -f 1) == fd7f4dfa8190e014013b9f08f3e973f4e4c26ffd179a204895533a7254813a70 ]] \
+    || fail 'Empreinte du bootstrap pip incorrecte.'
+chown root:usdashboard "$pip_wheel"
+chmod 0640 "$pip_wheel"
+runuser -u usdashboard -- "$runtime/bin/python" -m pip --isolated install \
+    --disable-pip-version-check --no-index --no-deps "$pip_wheel"
+mv -- "$pip_bootstrap" "$backup/pip-bootstrap"
 runuser -u usdashboard -- "$runtime/bin/python" -m pip --isolated install \
     --disable-pip-version-check --no-cache-dir --only-binary=:all: \
     -r "$payload/requirements.txt" -c "$payload/constraints.txt" pip setuptools
@@ -104,7 +135,7 @@ for dist in distributions():
 bundle = load_snapshot_bundle(Path(sys.argv[2]))
 if bundle.metadata['calculator_revision'] != Path('DEPLOYED_SHA').read_text().strip():
     raise SystemExit('Calculator provenance mismatch')
-print('RUNTIME_OK', version('GitPython'), version('urllib3'), version('streamlit'))
+print('RUNTIME_OK', *(f'{name}={version(name)}' for name in ('GitPython', 'urllib3', 'streamlit', 'pillow', 'certifi', 'pip', 'setuptools')))
 print('UNCHANGED_SNAPSHOT_OK', bundle.metadata['calculator_revision'], len(bundle.current))
 PY
     )

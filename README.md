@@ -111,6 +111,10 @@ checkout propre sur le serveur. Ce script refuse toute différence entre le
 code applicatif candidat et le code réellement actif. Il construit un nouvel
 environnement Python à son emplacement définitif, installe les pins sans
 privilèges root, exécute les tests et relit le snapshot existant avant de basculer.
+Le bootstrap pip est installé hors ligne depuis une wheel dont le SHA256 est
+épinglé avant tout téléchargement Python, pour ne pas réutiliser un ancien
+magasin de certificats embarqué. Les ressources locales de l'interface sont
+également comparées au candidat.
 
 Le timer est suspendu uniquement pendant la bascule et rétabli ensuite ; une
 collecte active ou un retry en attente bloque la bascule sans interrompre le
@@ -121,9 +125,15 @@ manifeste de l'agrégateur l0g n'est réécrit.
 `venv/DEPENDENCIES_SOURCE_SHA` identifie les nouveaux pins ; `DEPLOYED_SHA` et
 le SHA du snapshot continuent d'identifier le calculateur inchangé. Les pins
 effectivement installés sont dans `venv/release/requirements.txt` et
-`venv/release/constraints.txt`. Le script est volontairement limité au premier
-remplacement d'un venv classique : un candidat déjà présent ou un venv déjà
-symbolique impose une inspection avant toute nouvelle activation.
+`venv/release/constraints.txt`. Le script accepte un venv classique ou un lien
+relatif `runtime-<SHA>` créé par cette procédure, après vérification du dossier
+cible et de sa provenance. Tout autre lien, une provenance incohérente ou un
+candidat déjà présent impose une inspection avant toute nouvelle activation.
+
+Les correctifs du 24 octobre 2026 passent à Pillow 13, filelock 4 et setuptools
+84. Streamlit 1.66.1 est nécessaire pour la compatibilité officielle avec Pillow
+13 ; pip 26.2.2 corrige aussi sa copie embarquée de certifi. Ces mises à jour ne
+modifient ni les formules, ni le catalogue, ni les snapshots existants.
 
 ### Supervision de la collecte
 

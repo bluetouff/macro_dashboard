@@ -22,6 +22,13 @@ jobs:
         with:
           python-version: "3.13"
           cache: pip
+      - name: Bootstrap pip with a verified offline wheel
+        run: |
+          pip_bootstrap=$(mktemp -d)
+          pip_wheel="$pip_bootstrap/pip-26.2.2-py3-none-any.whl"
+          curl --fail --silent --show-error --proto '=https' --max-time 60 https://files.pythonhosted.org/packages/3f/06/3e4420302363fbb71be3c7f35ce042f54bfca330e3e66b3a2e3c4cca579f/pip-26.2.2-py3-none-any.whl --output "$pip_wheel"
+          test "$(sha256sum "$pip_wheel" | cut -d ' ' -f 1)" = fd7f4dfa8190e014013b9f08f3e973f4e4c26ffd179a204895533a7254813a70
+          python -m pip --isolated install --disable-pip-version-check --no-index --no-deps "$pip_wheel"
       - name: Install pinned dependencies
         run: python -m pip install --requirement requirements-dev.txt
       - name: Compile
